@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 
 	pb "github.com/bbengfort/notes/v1"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type NoteServer struct {
@@ -44,13 +47,30 @@ func (n NoteServer) Create(ctx context.Context, note *pb.Note) (*pb.Notebook, er
 }
 
 func main() {
-	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:8080"))
-	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
-	}
+	endpoint := fmt.Sprintf("localhost:8080")
 
+	lis, err := net.Listen("tcp", endpoint)
+	if err != nil {
+		log.Fatal(err)
+	}
 	var opts []grpc.ServerOption
 	grpcServer := grpc.NewServer(opts...)
 	pb.RegisterNoteServiceServer(grpcServer, &NoteServer{})
-	grpcServer.Serve(lis)
+	go grpcServer.Serve(lis)
+
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	// Register gRPC server endpoint
+	// Note: Make sure the gRPC server is running properly and accessible
+	mux := runtime.NewServeMux()
+	mopts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
+	err = pb.RegisterNoteServiceHandlerFromEndpoint(ctx, mux, endpoint, mopts)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Start HTTP server (and proxy calls to gRPC server endpoint)
+	http.ListenAndServe(":9090", mux)
 }
