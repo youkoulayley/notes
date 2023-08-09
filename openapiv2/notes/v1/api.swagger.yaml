@@ -1,0 +1,142 @@
+openapi: 3.0.1
+info:
+  title: Notes
+  contact:
+    name: bbengfort
+    url: https://github.com/bbengfort/notes
+    email: info@bengfort.com
+  license:
+    name: BSD 3-Clause License
+    url: https://github.com/bbengfort/notes/LICENSE
+  version: "1.0"
+servers:
+  - url: localhost:8080
+tags:
+  - name: NoteService
+paths:
+  /api/v1/notes:
+    get:
+      tags:
+        - NoteService
+      operationId: NoteService_Fetch
+      parameters:
+        - name: ids
+          in: query
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+              format: uint64
+        - name: author
+          in: query
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+        - name: before
+          in: query
+          schema:
+            type: string
+        - name: after
+          in: query
+          schema:
+            type: string
+        - name: private
+          in: query
+          schema:
+            type: boolean
+      responses:
+        200:
+          description: A successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/v1Notebook'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpcStatus'
+    post:
+      tags:
+        - NoteService
+      operationId: NoteService_Create
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/v1Note'
+        required: true
+      responses:
+        200:
+          description: A successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/v1Notebook'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpcStatus'
+      x-codegen-request-body-name: body
+components:
+  schemas:
+    protobufAny:
+      type: object
+      properties:
+        typeUrl:
+          type: string
+        value:
+          pattern: ^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$
+          type: string
+          format: byte
+    rpcStatus:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/protobufAny'
+    v1Error:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int64
+        message:
+          type: string
+    v1Note:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uint64
+        timestamp:
+          type: string
+        author:
+          type: string
+        text:
+          type: string
+        private:
+          type: boolean
+    v1Notebook:
+      type: object
+      properties:
+        error:
+          $ref: '#/components/schemas/v1Error'
+        notes:
+          type: array
+          items:
+            $ref: '#/components/schemas/v1Note'
